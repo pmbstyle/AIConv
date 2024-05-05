@@ -20,7 +20,6 @@ import speech2text from "./functions/speech2text.js"
 const upload = multer()
 
 app.post('/synthesize', async (req, res) => {
-    console.log(req.body)
     const text = req.body.text
 
     if (!text) {
@@ -38,7 +37,6 @@ app.post('/synthesize', async (req, res) => {
 })
 
 app.post('/chat', async (req, res) => {
-    console.log(req.body)
     const text = req.body.text
     const response = await ollama_chat(text)
 
@@ -51,11 +49,8 @@ app.post('/chat', async (req, res) => {
 
 app.post('/recording', upload.single('audio'), async (req, res) => {
     const audioBlob = req.file.buffer
-    console.log('audioBlob')
     const transcribedText = await speech2text(audioBlob)
-    console.log('got trascription:', transcribedText)
     const aiResponse = await ollama_chat(transcribedText)
-    console.log('got aiResponse:', aiResponse)
     const audioDataURI = await text2speech(aiResponse)
 
     if(typeof audioDataURL != Object) {

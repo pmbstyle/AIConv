@@ -2,8 +2,8 @@ import * as dotenv from "dotenv"
 dotenv.config()
 import { Ollama } from "@langchain/community/llms/ollama"
 const llm = new Ollama({
-    baseUrl: process.env.OLLAMA_BASE_URL,
-    model: process.env.OLLAMA_MODEL,
+    baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+    model: process.env.OLLAMA_MODEL || 'llama3',
 })
 
 const system_prompt = 'Answer in one sentence to following question: '
