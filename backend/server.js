@@ -15,7 +15,10 @@ app.use(cors({
 
 import text2speech from "./functions/text2speech.js"
 import ollama_chat from "./functions/ollama_chat.js"
+import groq_chat from "./functions/groq_chat.js"
 import speech2text from "./functions/speech2text.js"
+
+const llm_source = process.env.LLM_SOURCE || 'groq' //'groq' or 'ollama'
 
 const upload = multer()
 
@@ -38,7 +41,12 @@ app.post('/synthesize', async (req, res) => {
 
 app.post('/chat', async (req, res) => {
     const text = req.body.text
-    const response = await ollama_chat(text)
+    let response;
+    if(llm_source == 'ollama') {
+        response = await ollama_chat(text)
+    } else if(llm_source == 'groq') {
+        response = await groq_chat(text)
+    }
 
     if(typeof response != Object) {
         res.send({ response })
@@ -50,15 +58,21 @@ app.post('/chat', async (req, res) => {
 app.post('/recording', upload.single('audio'), async (req, res) => {
     const audioBlob = req.file.buffer
     const transcribedText = await speech2text(audioBlob)
-    const aiResponse = await ollama_chat(transcribedText)
+    let aiResponse;
+    if(llm_source == 'ollama') {
+        aiResponse = await ollama_chat(transcribedText)
+    } else if(llm_source == 'groq') {
+        aiResponse = await groq_chat(transcribedText)
+    }
     const audioDataURI = await text2speech(aiResponse)
 
-    if(typeof audioDataURL != Object) {
+    if(typeof audioDataURI != Object) {
         res.send({ audio: audioDataURI })
     } else {
         res.status(500).send('Error occurred while processing the request.')
     }
 })
+
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`)
