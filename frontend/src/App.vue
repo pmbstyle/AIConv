@@ -1,10 +1,16 @@
 <template>
-    <div>
-        <button @click="startRecording" :disabled="isRecording">Start Recording</button>
-        <button @click="stopRecording" :disabled="!isRecording">Stop Recording</button>
-        <p v-if="isRecording">Recording...</p>
-        <audio ref="audioPlayer" controls></audio>
+  <div class="bg-gray-800 h-screen flex w-full items-center justify-center">
+    <div class="container mx-auto bg-gray-900 p-6 rounded-lg flex flex-col md:flex-row h-[50%]">
+      <div class="video-container flex-1 m-2 border border-gray-700 flex flex-col justify-center items-center">
+        <audio ref="audioPlayer" controls class="hidden"></audio>
+      </div>
+      <div class="video-container flex-1 m-2 border border-gray-700 flex flex-col justify-center items-center">
+        <button class="btn btn-primary" @click="startRecording" :disabled="isRecording">Start Recording</button>
+        <p class="my-4">{{isRecording? 'Recording...' : 'Listening ...'}}</p>
+        <button class="btn btn-secondary" @click="stopRecording" :disabled="!isRecording">Stop Recording</button>
+      </div>
     </div>
+  </div>
 </template>
 
 <script setup lang="ts">
