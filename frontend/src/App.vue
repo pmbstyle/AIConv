@@ -12,7 +12,7 @@
         </div>
         <div class="video-container flex-1 m-2 border border-gray-700 flex flex-col justify-center items-center">
           <div class="avatar">
-            <div class="w-24 rounded-full ring ring-offset-base-100 ring-offset-2" :class="{'ring-success':isRecording}">
+            <div class="w-24 rounded-full ring ring-offset-base-100 ring-offset-2" :class="{'ring-success':recognizedText > 0}">
               <img :src="UserAvatar" />
             </div>
           </div>
@@ -21,9 +21,10 @@
       <div class="p-6 rounded-lg flex items-center justify-center mt-6">
         <button
           class="btn"
-          :class="{'btn-success':isRecording, 'btn-error': !isRecording}"
-          @click="toggleRecording">
-            Recording
+          :class="{'btn-success':isListening, 'btn-error': !isListening}"
+          @click="isListening.value ? stop() : start(); detectSilence()"
+          >
+          {{ isListening ? 'Stop Listening' : 'Start Listening' }}
         </button>
       </div>
     </div>
@@ -56,11 +57,17 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted } from 'vue'
+  import { ref, watch, onMounted } from 'vue'
   import axios from 'axios'
-
+  import { useSpeechRecognition } from '@vueuse/core'
   import AiAvatar from '@/assets/images/ai-avatar.png'
   import UserAvatar from '@/assets/images/user-avatar.png'
+
+  const { isListening, isFinal, result, start, stop } = useSpeechRecognition({
+    continuous: true,
+    lang: 'en-US',
+  })
+  const recognizedText = ref<strong>('')
 
   const isRecording = ref(false)
   let mediaRecorder: MediaRecorder | null = null
@@ -70,57 +77,67 @@
   const isInProgress = ref<boolean>(false)
   const chatHistory = ref<object[]>([])
 
-  const toggleRecording = async () => {
-    if (isRecording.value) {
-      stopRecording()
-    } else {
-      startRecording()
-    }
-  }
+  watch(
+    result,
+    (newResult) => {
+      recognizedText.value = newResult
+      console.log('recognizedText:', recognizedText.value)
+    },
+    { immediate: true }
+  )
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      mediaRecorder = new MediaRecorder(stream)
-      mediaRecorder.ondataavailable = (event) => {
-        chunks.push(event.data)
+  const detectSilence = async () => {
+    console.log('Starting detecting silence.')
+    const audioContext = new AudioContext()
+    const analyser = audioContext.createAnalyser()
+    const bufferLength = analyser.frequencyBinCount
+    const dataArray = new Uint8Array(bufferLength)
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    const source = audioContext.createMediaStreamSource(stream)
+    source.connect(analyser)
+
+    let silenceCounter = 0
+    const silenceThreshold = 100
+
+    const checkSilence = () => {
+      analyser.getByteFrequencyData(dataArray)
+      const isSilent = dataArray.every((value) => value < silenceThreshold)
+
+      if (isSilent) {
+        silenceCounter++
+      } else {
+        silenceCounter = 0
       }
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/wav' })
-        sendAudioToServer(blob)
-        chunks.length = 0
+
+      if (silenceCounter > 250) {
+        console.log(`Silence detected for the last ${silenceCounter} frames. Stopping recognition and sending transcription to server.`)
+        stop()
+        sendAudioToServer(recognizedText.value)
+        recognizedText.value = ''
+        silenceCounter = 0
+      } else {
+        requestAnimationFrame(checkSilence)
       }
-      mediaRecorder.start()
-      isRecording.value = true
-    } catch (error) {
-      console.error('Error accessing microphone:', error)
     }
+
+    checkSilence()
   }
 
-  const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop()
-      isRecording.value = false
-    }
-  }
-
-  const sendAudioToServer = async (blob: Blob) => {
+  const sendAudioToServer = async (transcribedText) => {
     isInProgress.value = true
     try {
-      const formData = new FormData()
-      formData.append('audio', blob, 'recording.webm')
-
-      const response = await axios.post('http://localhost:3000/recording', formData, {
+      const response = await axios.post('http://localhost:3000/recording', { text: transcribedText }, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/json',
         },
       })
 
       if (response.status === 200) {
         const audioDataURI = response.data.audio
         playAudio(audioDataURI)
-        chatHistory.value.push({ from:'user', message:response.data.userMessage })
-        chatHistory.value.push({ from:'ai', message:response.data.aiResponse })
+        chatHistory.value.push({ from: 'user', message: transcribedText })
+        chatHistory.value.push({ from: 'ai', message: response.data.aiResponse })
       } else {
         console.error('Error sending audio to server')
       }
@@ -133,6 +150,7 @@
 
   const playAudio = (audioDataURI: string) => {
     if (audioPlayer.value) {
+      console.log('Audio received. Playing...')
       isPlaying.value = true
       const audioContext = new AudioContext()
       fetch(audioDataURI)
@@ -143,7 +161,10 @@
           source.buffer = audioBuffer
           source.connect(audioContext.destination)
           source.onended = () => {
+            console.log('Stop playing. Listening...')
             isPlaying.value = false
+            start()
+            detectSilence()
           }
           source.start()
           audioPlayer.value.src = audioDataURI
