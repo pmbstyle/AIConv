@@ -81,7 +81,7 @@
     result,
     (newResult) => {
       recognizedText.value = newResult
-      console.log('recognizedText:', recognizedText.value)
+      if(recognizedText.value.length > 0) console.log('recognizedText:', recognizedText.value)
     },
     { immediate: true }
   )
@@ -110,7 +110,7 @@
         silenceCounter = 0
       }
 
-      if (silenceCounter > 250) {
+      if (silenceCounter > 299) {
         console.log(`Silence detected for the last ${silenceCounter} frames. Stopping recognition and sending transcription to server.`)
         stop()
         sendAudioToServer(recognizedText.value)
