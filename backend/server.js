@@ -67,7 +67,11 @@ app.post('/recording', upload.single('audio'), async (req, res) => {
     const audioDataURI = await text2speech(aiResponse)
 
     if(typeof audioDataURI != Object) {
-        res.send({ audio: audioDataURI })
+        res.send({ 
+            userMessage:transcribedText,
+            aiResponse:aiResponse,
+            audio: audioDataURI
+        })
     } else {
         res.status(500).send('Error occurred while processing the request.')
     }
