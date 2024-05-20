@@ -6,12 +6,13 @@ const llm = new Ollama({
     model: process.env.OLLAMA_MODEL || 'llama3',
 })
 
-const system_prompt = 'Answer in one sentence to following question: '
-
+const system_prompt = 'Follow the conversation and provide the best and short answers. '
+const messages = []
 const ollama_chat = async (text) => {
     try {
-        const response = await llm.invoke(system_prompt+text)
-        console.log('ollama_chat response', response)
+        messages.push({from:'user', message:text})
+        const response = await llm.invoke(system_prompt+JSON.stringify(messages))
+        messages.push({from:'ai', message:response})
         return response
     } catch (error) {
         console.error(error)
