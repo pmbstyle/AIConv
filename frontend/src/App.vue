@@ -129,6 +129,9 @@
           isRecording.value = false
           console.log('Text recognized:', recognizedText.value)
           console.log('Sending to the server ...')
+          if(chatHistory.value.length == 1) {
+            recognizedText.value = recognizedText.value + ' userfirstmessage'
+          }
           await sendAudioToServer(recognizedText.value)
           console.log('Response received from the server.')
           recognizedText.value = ''
@@ -170,10 +173,10 @@
         },
       })
 
-      if (response.status === 200) {
+      if (response.status === 200 && !isPlaying.value) {
         const audioDataURI = response.data.audio
-        playAudio(audioDataURI)
         chatHistory.value.push({ from: 'ai', message: response.data.aiResponse })
+        await playAudio(audioDataURI)
       } else {
         console.error('Error sending audio to server')
       }
