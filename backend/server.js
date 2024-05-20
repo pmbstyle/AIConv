@@ -12,15 +12,18 @@ app.use(cors({
     origin: allowedOrigins
 }))
 
-import text2speech from "./functions/text2speech.js"
+import { text2speech, text2speechLocal } from "./functions/text2speech.js"
 import ollama_chat from "./functions/ollama_chat.js"
 import groq_chat from "./functions/groq_chat.js"
 
 const llm_source = process.env.LLM_SOURCE || 'groq' //'groq' or 'ollama'
+const tts_source = process.env.TTS_SOURCE || 'local' //'local' or 'eleven'
 
 app.post('/recording', async (req, res) => {
     const transcribedText = req.body.text
     let aiResponse;
+    let audioDataURI;
+    
     if(llm_source == 'ollama') {
         aiResponse = await ollama_chat(transcribedText)
     } else if(llm_source == 'groq') {
@@ -28,7 +31,14 @@ app.post('/recording', async (req, res) => {
     } else {
         return res.status(400).send({ error: 'LLM source is not configured.' })
     }
-    const audioDataURI = await text2speech(aiResponse)
+
+    if(tts_source == 'local') {
+        audioDataURI = await text2speechLocal(aiResponse)
+    } else if(tts_source == 'eleven') {
+        audioDataURI = await text2speech(aiResponse)
+    } else {
+        return res.status(400).send({ error: 'TTS source is not configured.' })
+    }
 
     if(typeof audioDataURI != Object) {
         res.send({ 

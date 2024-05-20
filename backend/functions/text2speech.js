@@ -42,5 +42,36 @@ const text2speech = async (text) => {
         }
     }
 }
+const text2speechLocal = async (text) => {
+    console.log("Synthesizing audio using local server...", text)
 
-export default text2speech
+    try {
+        const response = await axios.post(
+        'http://127.0.0.1:5000/tts',
+        {
+            text: text.replace(/"/g, '\\"')
+        },
+        {
+            headers: {
+            'Content-Type': 'application/json',
+            accept: 'audio/wav',
+            },
+            responseType: 'arraybuffer',
+        }
+        )
+
+        const audioBuffer = Buffer.from(response.data, 'binary')
+        const base64Audio = audioBuffer.toString('base64')
+        const audioDataURI = `data:audio/wav;base64,${base64Audio}`
+
+        return audioDataURI
+    } catch (error) {
+        console.error(error)
+        return {
+            error:'Error occurred while processing the request.',
+            error_message: error.message
+        }
+    }
+}
+
+export { text2speech, text2speechLocal }

@@ -63,6 +63,9 @@
   import AiAvatar from '@/assets/images/ai-avatar.png'
   import UserAvatar from '@/assets/images/user-avatar.png'
 
+  const api_base = import.meta.env.VITE_API_BASE_URL
+  console.log(api_base)
+
   const { isListening, isFinal, result, start, stop } = useSpeechRecognition({
     continuous: true,
     lang: 'en-US',
@@ -127,7 +130,7 @@
   const sendAudioToServer = async (transcribedText) => {
     isInProgress.value = true
     try {
-      const response = await axios.post('http://localhost:3000/recording', { text: transcribedText }, {
+      const response = await axios.post(api_base+'recording', { text: transcribedText }, {
         headers: {
           'Content-Type': 'application/json',
         },
