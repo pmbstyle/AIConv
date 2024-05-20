@@ -12,7 +12,7 @@
         </div>
         <div class="video-container flex-1 m-2 border border-gray-700 flex flex-col justify-center items-center">
           <div class="avatar">
-            <div class="w-24 rounded-full ring ring-offset-base-100 ring-offset-2" :class="{'ring-success':recognizedText > 0}">
+            <div class="w-24 rounded-full ring ring-offset-base-100 ring-offset-2" :class="{'ring-success':isRecording > 0}">
               <img :src="UserAvatar" />
             </div>
           </div>
@@ -21,14 +21,14 @@
       <div class="p-6 rounded-lg flex items-center justify-center mt-6">
         <button
           class="btn"
-          :class="{'btn-success':isListening, 'btn-error': !isListening}"
-          @click="isListening.value ? stop() : start(); detectSilence()"
+          :class="{'btn-success':!isRecording, 'btn-error': isRecording}"
+          @click="toggleRecording()"
           >
-          {{ isListening ? 'Stop Listening' : 'Start Listening' }}
+          {{ isRecording ? 'Stop Listening' : 'Start Listening' }}
         </button>
       </div>
     </div>
-    <div class="h-full w-full max-w-lg bg-gray-900 self-end px-2 py-4 overflow-y-scroll">
+    <div class="h-full w-full max-w-lg bg-gray-900 self-end p-4 overflow-y-scroll">
       <template v-if="chatHistory.length">
         <div
           class="chat mb-2"
@@ -60,7 +60,7 @@
   import { ref, watch, onMounted } from 'vue'
   import axios from 'axios'
   import { useSpeechRecognition } from '@vueuse/core'
-  import AiAvatar from '@/assets/images/ai-avatar.png'
+  import AiAvatar from '@/assets/images/ai-avatar.jpg'
   import UserAvatar from '@/assets/images/user-avatar.png'
 
   const api_base = import.meta.env.VITE_API_BASE_URL
@@ -84,13 +84,21 @@
     result,
     (newResult) => {
       recognizedText.value = newResult
-      if(recognizedText.value.length > 0) console.log('recognizedText:', recognizedText.value)
+      if(recognizedText.value.length > 0) {
+        chatHistory.value[chatHistory.value.length-1].message = recognizedText.value
+      }
     },
     { immediate: true }
   )
 
-  const detectSilence = async () => {
+  const startListening = async () => {
+    if(!isRecording.value) return
+    start() 
     console.log('Starting detecting silence.')
+    chatHistory.value.push({
+      from: 'user',
+      message: '...',
+    })
     const audioContext = new AudioContext()
     const analyser = audioContext.createAnalyser()
     const bufferLength = analyser.frequencyBinCount
@@ -103,7 +111,8 @@
     let silenceCounter = 0
     const silenceThreshold = 100
 
-    const checkSilence = () => {
+    const checkSilence = async () => {
+      if(!isRecording.value) return
       analyser.getByteFrequencyData(dataArray)
       const isSilent = dataArray.every((value) => value < silenceThreshold)
 
@@ -114,17 +123,42 @@
       }
 
       if (silenceCounter > 299) {
-        console.log(`Silence detected for the last ${silenceCounter} frames. Stopping recognition and sending transcription to server.`)
-        stop()
-        sendAudioToServer(recognizedText.value)
-        recognizedText.value = ''
-        silenceCounter = 0
+        console.log(`Silence detected for the last ${silenceCounter} frames. Stopping recognition and checking for text.`)
+        if(recognizedText.value.length > 0) {
+          stop()
+          isRecording.value = false
+          console.log('Text recognized:', recognizedText.value)
+          console.log('Sending to the server ...')
+          await sendAudioToServer(recognizedText.value)
+          console.log('Response received from the server.')
+          recognizedText.value = ''
+          silenceCounter = 0
+        } else {
+          console.log('No text recognized.')
+          silenceCounter = 0
+          checkSilence()
+        }
       } else {
         requestAnimationFrame(checkSilence)
       }
     }
 
     checkSilence()
+  }
+
+  const toggleRecording = () => {
+    isRecording.value = !isRecording.value
+    console.log('Toggling recording', isRecording.value)
+    if (!isRecording.value) {
+      stop()
+      if (chatHistory.value[chatHistory.value.length-1].message == '...') {
+        chatHistory.value.pop()
+      }
+      console.log('Recording stopped.')
+    } else {
+      console.log('Recording is not started.')
+      startListening()
+    }
   }
 
   const sendAudioToServer = async (transcribedText) => {
@@ -139,7 +173,6 @@
       if (response.status === 200) {
         const audioDataURI = response.data.audio
         playAudio(audioDataURI)
-        chatHistory.value.push({ from: 'user', message: transcribedText })
         chatHistory.value.push({ from: 'ai', message: response.data.aiResponse })
       } else {
         console.error('Error sending audio to server')
@@ -166,8 +199,8 @@
           source.onended = () => {
             console.log('Stop playing. Listening...')
             isPlaying.value = false
-            start()
-            detectSilence()
+            isRecording.value = true
+            startListening()
           }
           source.start()
           audioPlayer.value.src = audioDataURI

@@ -54,7 +54,7 @@ const text2speechLocal = async (text) => {
         {
             headers: {
             'Content-Type': 'application/json',
-            accept: 'audio/wav',
+            accept: 'audio/mpeg',
             },
             responseType: 'arraybuffer',
         }
@@ -62,7 +62,7 @@ const text2speechLocal = async (text) => {
 
         const audioBuffer = Buffer.from(response.data, 'binary')
         const base64Audio = audioBuffer.toString('base64')
-        const audioDataURI = `data:audio/wav;base64,${base64Audio}`
+        const audioDataURI = `data:audio/mpeg;base64,${base64Audio}`
 
         return audioDataURI
     } catch (error) {
