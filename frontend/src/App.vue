@@ -44,7 +44,7 @@
         >
           <div class="chat-image avatar">
             <div class="w-10 rounded-full">
-              <img :src="message.from === 'ai' ? AiAvatar : UserAvatar" :alt="`${message.from} Avatar`" />
+              <img :src="message.from === 'ai' ? AiAvatarStatic : UserAvatarStatic" :alt="`${message.from} Avatar`" />
             </div>
           </div>
           <div class="chat-bubble" :class="{'chat-bubble-primary': message.from === 'ai'}">
