@@ -4,16 +4,22 @@
       <div class="bg-gray-900 p-6 rounded-lg flex flex-col md:flex-row h-1/2 w-full">
         <div class="video-container flex-1 m-2 border border-gray-700 flex flex-col justify-center items-center">
           <audio ref="audioPlayer" controls class="hidden"></audio>
-          <div class="avatar">
-            <div :class="['w-24 rounded-full ring ring-offset-base-100 ring-offset-2', { 'ring-success': isPlaying }]">
-              <img :src="AiAvatar" alt="AI Avatar" />
+          <div class="avatar w-[250px] h-[250px]">
+            <div :class="['rounded-full ring ring-offset-base-100 ring-offset-2', { 'ring-success': isPlaying }]">
+              <img
+                :src="isPlaying ? AiAvatar : AiAvatarStatic"
+                alt="AI Avatar"
+              />
             </div>
           </div>
         </div>
         <div class="video-container flex-1 m-2 border border-gray-700 flex flex-col justify-center items-center">
-          <div class="avatar">
-            <div :class="['w-24 rounded-full ring ring-offset-base-100 ring-offset-2', { 'ring-success': isRecording }]">
-              <img :src="UserAvatar" alt="User Avatar" />
+          <div class="avatar w-[250px] h-[250px]">
+            <div :class="['rounded-full ring ring-offset-base-100 ring-offset-2', { 'ring-success': isRecording }]">
+              <img
+                :src="isRecording ? UserAvatar : UserAvatarStatic"
+                alt="User Avatar"
+              />
             </div>
           </div>
         </div>
@@ -57,8 +63,10 @@
 import { ref, watch, onMounted } from 'vue'
 import axios from 'axios'
 import { useSpeechRecognition } from '@vueuse/core'
-import AiAvatar from '@/assets/images/ai-avatar.jpg'
-import UserAvatar from '@/assets/images/user-avatar.png'
+import AiAvatar from '@/assets/images/ai-avatar-animated.gif'
+import UserAvatar from '@/assets/images/user-avatar-animated.gif'
+import AiAvatarStatic from '@/assets/images/ai-avatar-static.png'
+import UserAvatarStatic from '@/assets/images/user-avatar-static.png'
 
 const apiBase = import.meta.env.VITE_API_BASE_URL
 console.log(apiBase)
@@ -99,7 +107,7 @@ const startListening = async () => {
   source.connect(analyser)
 
   let silenceCounter = 0
-  const silenceThreshold = 100
+  const silenceThreshold = 200
 
   const checkSilence = async () => {
     if (!isRecording.value) return
