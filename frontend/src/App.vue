@@ -89,16 +89,6 @@ watch(result, (newResult) => {
   }
 }, { immediate: true })
 
-watch(isPlaying, (newValue) => {
-  if (aiVideo.value) {
-    if (newValue) {
-      aiVideo.value.play()
-    } else {
-      aiVideo.value.pause()
-    }
-  }
-})
-
 const startListening = async () => {
   if (!isRecording.value) return
 
@@ -211,9 +201,12 @@ const playAudio = async (audioDataURI: string) => {
         isPlaying.value = false
         isRecording.value = true
         startListening()
+        aiVideo.value.pause()
+        aiVideo.value.currentTime = 0
       }
       source.start()
       audioPlayer.value.src = audioDataURI
+      aiVideo.value.play()
       await audioPlayer.value.play()
     } catch (error) {
       console.error('Error playing audio:', error)
