@@ -4,12 +4,9 @@
       <div class="bg-gray-900 p-6 rounded-lg flex flex-col md:flex-row h-1/2 w-full">
         <div class="video-container flex-1 m-2 border border-gray-700 flex flex-col justify-center items-center">
           <audio ref="audioPlayer" controls class="hidden"></audio>
-          <div class="avatar w-[250px] h-[250px]">
-            <div :class="['rounded-full ring ring-offset-base-100 ring-offset-2', { 'ring-success': isPlaying }]">
-              <img
-                :src="isPlaying ? AiAvatar : AiAvatarStatic"
-                alt="AI Avatar"
-              />
+          <div class="avatar">
+            <div class="rounded-full ring ring-offset-base-100 ring-offset-2 relative overflow-hidden w-[250px] h-[250px] !flex justify-center items-center">
+              <video class="max-w-screen-sm h-full absolute" ref="aiVideo" :src="videoSrc" loop muted :autoplay="isPlaying"></video>
             </div>
           </div>
         </div>
@@ -67,6 +64,7 @@ import AiAvatar from '@/assets/images/ai-avatar-animated.gif'
 import UserAvatar from '@/assets/images/user-avatar-animated.gif'
 import AiAvatarStatic from '@/assets/images/ai-avatar-static.png'
 import UserAvatarStatic from '@/assets/images/user-avatar-static.png'
+import videoSrc from '@/assets/videos/video.mp4'
 
 const apiBase = import.meta.env.VITE_API_BASE_URL
 console.log(apiBase)
@@ -79,6 +77,7 @@ const { isListening, isFinal, result, start, stop } = useSpeechRecognition({
 const recognizedText = ref('')
 const isRecording = ref(false)
 const audioPlayer = ref<HTMLAudioElement | null>(null)
+const aiVideo = ref<HTMLVideoElement | null>(null)
 const isPlaying = ref(false)
 const isInProgress = ref(false)
 const chatHistory = ref<{ from: string, message: string }[]>([])
@@ -89,6 +88,16 @@ watch(result, (newResult) => {
     chatHistory.value[chatHistory.value.length - 1].message = recognizedText.value
   }
 }, { immediate: true })
+
+watch(isPlaying, (newValue) => {
+  if (aiVideo.value) {
+    if (newValue) {
+      aiVideo.value.play()
+    } else {
+      aiVideo.value.pause()
+    }
+  }
+})
 
 const startListening = async () => {
   if (!isRecording.value) return
